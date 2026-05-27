@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, GoogleAuthProvider, signInWithCredential } from 'firebase/auth'
 import { auth, googleProvider, hasFirebaseConfig } from '../lib/firebase'
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
 
 const AuthContext = createContext(null)
 
@@ -46,12 +47,21 @@ export function AuthProvider({ children }) {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
       const isCapacitor = !!window.Capacitor
 
-      if (isMobile && !isCapacitor) {
+      if (isCapacitor) {
+        // Native Capacitor App - Use the Capawesome Firebase Authentication plugin for native sign-in!
+        const result = await FirebaseAuthentication.signInWithGoogle()
+        if (result.credential) {
+          const credential = GoogleAuthProvider.credential(result.credential.idToken)
+          const userCredential = await signInWithCredential(auth, credential)
+          return userCredential.user
+        }
+        throw new Error('No native Google credentials received.')
+      } else if (isMobile) {
         // Mobile web browsers (Chrome/Safari) - use signInWithRedirect to avoid sessionStorage popup tab failures
         await signInWithRedirect(auth, googleProvider)
         return null
       } else {
-        // Desktop or native platforms
+        // Desktop or standard web platforms
         const result = await signInWithPopup(auth, googleProvider)
         return result.user
       }
