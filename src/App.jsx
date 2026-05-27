@@ -1,10 +1,19 @@
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import Analysis from './pages/Analysis'
 import Interactive from './pages/Interactive'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import { useAuth } from './context/AuthContext'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
 
 function App() {
   const { user, loading, signOutUser, signInWithDemo } = useAuth()
@@ -25,6 +34,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <div className="app">
         <header className="topbar">
           <div className="brand">
@@ -84,9 +94,9 @@ function App() {
 
         <main className="page">
           <Routes>
-            <Route path="/" element={user ? <Dashboard /> : <Login />} />
-            <Route path="/analysis" element={<Analysis />} />
-            <Route path="/interactive" element={<Interactive />} />
+            <Route path="/" element={user ? <Dashboard key={user.uid} /> : <Login />} />
+            <Route path="/analysis" element={<Analysis key={user?.uid || 'guest'} />} />
+            <Route path="/interactive" element={<Interactive key={user?.uid || 'guest'} />} />
           </Routes>
         </main>
 

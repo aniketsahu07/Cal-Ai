@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -58,32 +58,47 @@ function MacroRing({ label, value, target, color, percent }) {
 
 function Dashboard() {
   const { user } = useAuth()
-  
+  const userKey = user?.uid || 'guest'
+
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const [diary, setDiary] = useState(() => {
-    const storedDiary = localStorage.getItem('cal-ai-diary')
+    const storedDiary = localStorage.getItem(`cal-ai-diary_${userKey}`)
     if (storedDiary) {
       return JSON.parse(storedDiary)
     }
-    localStorage.setItem('cal-ai-diary', JSON.stringify(defaultMeals))
+    localStorage.setItem(`cal-ai-diary_${userKey}`, JSON.stringify(defaultMeals))
     return defaultMeals
   })
 
   const [water, setWater] = useState(() => {
-    const storedWater = localStorage.getItem('cal-ai-water')
+    const storedWater = localStorage.getItem(`cal-ai-water_${userKey}`)
     return storedWater ? parseFloat(storedWater) : 1.6
   })
 
   const [weightHistory, setWeightHistory] = useState(() => {
-    const storedWeight = localStorage.getItem('cal-ai-weight')
+    const storedWeight = localStorage.getItem(`cal-ai-weight_${userKey}`)
     if (storedWeight) {
       return JSON.parse(storedWeight)
     }
-    localStorage.setItem('cal-ai-weight', JSON.stringify(defaultWeightHistory))
+    localStorage.setItem(`cal-ai-weight_${userKey}`, JSON.stringify(defaultWeightHistory))
     return defaultWeightHistory
   })
 
   const [newWeight, setNewWeight] = useState('')
-  
+
+  const [streak, setStreak] = useState(() => {
+    const storedStreak = localStorage.getItem(`cal-ai-streak_${userKey}`)
+    return storedStreak ? parseInt(storedStreak, 10) : 0
+  })
+
   const dailyGoal = 1950
   const dailyWaterGoal = 3.0
 
@@ -96,16 +111,39 @@ function Dashboard() {
   const caloriePercent = Math.min(100, Math.round((totalCalories / dailyGoal) * 100))
   const remainingCalories = Math.max(0, dailyGoal - totalCalories)
 
+  // Dynamic streak tracker helper
+  const updateStreak = () => {
+    const todayStr = new Date().toDateString()
+    const lastLoggedDate = localStorage.getItem(`cal-ai-streak-date_${userKey}`)
+    if (lastLoggedDate !== todayStr) {
+      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || '0', 10)
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toDateString()
+
+      if (lastLoggedDate === yesterdayStr) {
+        currentStreak += 1
+      } else {
+        currentStreak = 1
+      }
+
+      localStorage.setItem(`cal-ai-streak_${userKey}`, currentStreak.toString())
+      localStorage.setItem(`cal-ai-streak-date_${userKey}`, todayStr)
+      setStreak(currentStreak)
+    }
+  }
+
   // Handlers
   const addWater = () => {
     const nextWater = parseFloat((water + 0.25).toFixed(2))
     setWater(nextWater)
-    localStorage.setItem('cal-ai-water', nextWater.toString())
+    localStorage.setItem(`cal-ai-water_${userKey}`, nextWater.toString())
+    updateStreak()
   }
 
   const resetWater = () => {
     setWater(0)
-    localStorage.setItem('cal-ai-water', '0')
+    localStorage.setItem(`cal-ai-water_${userKey}`, '0')
   }
 
   const handleAddWeight = (e) => {
@@ -121,17 +159,18 @@ function Dashboard() {
 
     const updatedHistory = [...weightHistory, newEntry]
     setWeightHistory(updatedHistory)
-    localStorage.setItem('cal-ai-weight', JSON.stringify(updatedHistory))
+    localStorage.setItem(`cal-ai-weight_${userKey}`, JSON.stringify(updatedHistory))
     setNewWeight('')
+    updateStreak()
   }
 
   const clearWeight = () => {
-    localStorage.setItem('cal-ai-weight', JSON.stringify(defaultWeightHistory))
+    localStorage.setItem(`cal-ai-weight_${userKey}`, JSON.stringify(defaultWeightHistory))
     setWeightHistory(defaultWeightHistory)
   }
 
   const clearDiary = () => {
-    localStorage.setItem('cal-ai-diary', JSON.stringify([]))
+    localStorage.setItem(`cal-ai-diary_${userKey}`, JSON.stringify([]))
     setDiary([])
   }
 
@@ -140,14 +179,19 @@ function Dashboard() {
       {/* Header Summary */}
       <div className="dashboard-welcome">
         <div>
-          <div className="eyebrow">Personal Dashboard</div>
+          <div className="eyebrow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>Personal Dashboard</span>
+            <span style={{ fontSize: '13px', color: 'var(--accent-strong)', fontWeight: '700', letterSpacing: '0.05em' }}>
+              🕒 {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} · {currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
+            </span>
+          </div>
           <h1>Welcome back, {user?.displayName || 'Cal Athlete'}!</h1>
           <p className="quote">"Small daily habits compound into massive lifetime results."</p>
         </div>
         <div className="streak-badge">
           <span className="fire-icon">🔥</span>
           <div>
-            <strong>12 Days</strong>
+            <strong>{streak} {streak === 1 ? 'Day' : 'Days'}</strong>
             <span>Streak Active</span>
           </div>
         </div>

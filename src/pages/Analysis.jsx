@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const macros = [
   { label: 'Calories', value: '540 kcal', percent: 72, detail: 'On track' },
@@ -52,6 +53,7 @@ const formatTime = (timestamp) =>
   })
 
 function Analysis() {
+  const { user } = useAuth()
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [analysis, setAnalysis] = useState(null)
@@ -335,7 +337,8 @@ Return a valid, raw JSON object (with no markdown backticks or wrappers, just ra
 
   const addMealToDiary = () => {
     if (!analysis) return
-    const currentDiary = JSON.parse(localStorage.getItem('cal-ai-diary') || '[]')
+    const userKey = user?.uid || 'guest'
+    const currentDiary = JSON.parse(localStorage.getItem(`cal-ai-diary_${userKey}`) || '[]')
     const mealEntry = {
       id: Date.now(),
       name: analysis.description || analysis.label || 'Meal log',
@@ -346,7 +349,27 @@ Return a valid, raw JSON object (with no markdown backticks or wrappers, just ra
       time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     }
     currentDiary.unshift(mealEntry)
-    localStorage.setItem('cal-ai-diary', JSON.stringify(currentDiary))
+    localStorage.setItem(`cal-ai-diary_${userKey}`, JSON.stringify(currentDiary))
+
+    // Update dynamic streak on logging meal!
+    const todayStr = new Date().toDateString()
+    const lastLoggedDate = localStorage.getItem(`cal-ai-streak-date_${userKey}`)
+    if (lastLoggedDate !== todayStr) {
+      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || '0', 10)
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toDateString()
+
+      if (lastLoggedDate === yesterdayStr) {
+        currentStreak += 1
+      } else {
+        currentStreak = 1
+      }
+
+      localStorage.setItem(`cal-ai-streak_${userKey}`, currentStreak.toString())
+      localStorage.setItem(`cal-ai-streak-date_${userKey}`, todayStr)
+    }
+
     alert('Meal added to daily diary successfully!')
   }
 
