@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const messages = [
+const initialMessages = [
   {
     from: 'assistant',
     text: 'Want a lighter dinner to balance lunch? I can suggest options under 450 kcal.',
@@ -21,7 +22,78 @@ const tasks = [
   { title: 'Steps target', value: '6,800', status: '2k to go' },
 ]
 
+const isMobileOrProd = import.meta.env.PROD || !window.location.hostname.includes('localhost')
+
+const GEMINI_ENDPOINT = isMobileOrProd
+  ? `https://generativelanguage.googleapis.com/v1beta/models/${import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash'}:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY || ''}`
+  : '/api/gemini'
+
 function Interactive() {
+  const [chatMessages, setChatMessages] = useState(initialMessages)
+  const [inputText, setInputText] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault()
+    const text = inputText.trim()
+    if (!text || loading) return
+
+    const newMessages = [...chatMessages, { from: 'user', text }]
+    setChatMessages(newMessages)
+    setInputText('')
+    setLoading(true)
+
+    const fallbackResponse = "I hear you! To get personalized calorie and diet advice from Cal AI, please configure your Gemini API key in the environment variables."
+
+    if (import.meta.env.VITE_GEMINI_API_KEY) {
+      try {
+        const contents = newMessages.map(msg => ({
+          role: msg.from === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
+        }))
+
+        const response = await fetch(GEMINI_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents,
+            systemInstruction: {
+              parts: [{ text: "You are Cal AI, a premium, friendly, and expert calorie tracking and nutritional assistant. Give concise, actionable, and scientific advice about nutrition, meal prep, fitness, and health." }]
+            }
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Gemini API returned an error.')
+        }
+
+        const data = await response.json()
+        const assistantText = data?.candidates?.[0]?.content?.parts?.[0]?.text
+        if (assistantText) {
+          setChatMessages(prev => [...prev, { from: 'assistant', text: assistantText }])
+        } else {
+          throw new Error('Empty response.')
+        }
+      } catch (err) {
+        console.error('Gemini chat error:', err)
+        setChatMessages(prev => [...prev, { from: 'assistant', text: "Apologies, I encountered an issue connecting to the AI brain. Let me know if you want to try again!" }])
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      setTimeout(() => {
+        setChatMessages(prev => [...prev, { from: 'assistant', text: fallbackResponse }])
+        setLoading(false)
+      }, 800)
+    }
+  }
+
+  const triggerFilter = (filterName) => {
+    setInputText(`Suggest some ${filterName.toLowerCase()} meal options.`)
+  }
+
   return (
     <section className="page-stack">
       <div className="page-header">
@@ -42,19 +114,39 @@ function Interactive() {
             </div>
             <span className="chip">Live</span>
           </div>
-          <div className="chat-window">
-            {messages.map((msg) => (
-              <div key={msg.text} className={`bubble ${msg.from}`}>
+          <div className="chat-window" style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gap: '12px', paddingBottom: '12px' }}>
+            {chatMessages.map((msg, index) => (
+              <div key={index} className={`bubble ${msg.from}`}>
                 {msg.text}
               </div>
             ))}
+            {loading && (
+              <div className="bubble assistant" style={{ fontStyle: 'italic', color: 'var(--muted)' }}>
+                Cal AI is thinking...
+              </div>
+            )}
           </div>
-          <div className="chat-input">
-            <span>Type your question...</span>
-            <button className="primary-btn" type="button">
+          <form className="chat-input" onSubmit={handleSendMessage}>
+            <input
+              type="text"
+              style={{
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                fontFamily: 'inherit',
+                fontSize: '14px',
+                color: 'var(--ink)'
+              }}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Type your question..."
+              disabled={loading}
+            />
+            <button className="primary-btn" type="submit" disabled={loading || !inputText.trim()} style={{ padding: '6px 16px', fontSize: '13px' }}>
               Send
             </button>
-          </div>
+          </form>
         </div>
 
         <div className="stack">
@@ -76,21 +168,21 @@ function Interactive() {
             <h3>Smart filters</h3>
             <p>Tap to narrow recommendations instantly.</p>
             <div className="filter-row">
-              <button className="ghost-btn" type="button">
+              <button className="ghost-btn" type="button" onClick={() => triggerFilter('High protein')}>
                 High protein
               </button>
-              <button className="ghost-btn" type="button">
+              <button className="ghost-btn" type="button" onClick={() => triggerFilter('10 min prep')}>
                 10 min prep
               </button>
-              <button className="ghost-btn" type="button">
+              <button className="ghost-btn" type="button" onClick={() => triggerFilter('Dairy free')}>
                 Dairy free
               </button>
             </div>
             <div className="filter-row">
-              <button className="ghost-btn" type="button">
+              <button className="ghost-btn" type="button" onClick={() => triggerFilter('Budget friendly')}>
                 Budget friendly
               </button>
-              <button className="ghost-btn" type="button">
+              <button className="ghost-btn" type="button" onClick={() => triggerFilter('Post workout')}>
                 Post workout
               </button>
             </div>
