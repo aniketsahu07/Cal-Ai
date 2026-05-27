@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
 import { auth, googleProvider, hasFirebaseConfig } from '../lib/firebase'
 
 const AuthContext = createContext(null)
@@ -43,8 +43,18 @@ export function AuthProvider({ children }) {
 
     setError('')
     try {
-      const result = await signInWithPopup(auth, googleProvider)
-      return result.user
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      const isCapacitor = !!window.Capacitor
+
+      if (isMobile && !isCapacitor) {
+        // Mobile web browsers (Chrome/Safari) - use signInWithRedirect to avoid sessionStorage popup tab failures
+        await signInWithRedirect(auth, googleProvider)
+        return null
+      } else {
+        // Desktop or native platforms
+        const result = await signInWithPopup(auth, googleProvider)
+        return result.user
+      }
     } catch (err) {
       let friendlyError = err?.message || 'Google sign-in failed.'
       // Provide actionable feedback for sessionStorage / mobile webview blocks
