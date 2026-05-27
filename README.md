@@ -1,2 +1,31 @@
-# Cal-Ai
-Cal AI  is an AI-powered mobile calorie tracker where users can snap a photo of their meal and instantly receive a nutritional breakdown — including calories, protein, carbs, and fat. It features a daily food diary with a running calorie total, macro progress rings, weekly history charts, and streak &amp; goal tracking.
+# Cal AI
+
+Cal AI is a calorie-tracking experience that turns a meal photo into a clean,
+human-friendly nutrition summary. The flow focuses on three screens: a
+Google-style login, a research-backed analysis output, and an interactive
+planning assistant.
+
+## Screens
+
+- Login: onboarding, Google sign-in CTA, and product promise.
+- Analysis: macro breakdown, meal snapshot, and research notes.
+- Interactive: chat-based guidance, quick filters, and daily plan actions.
+
+## Tech stack
+
+- React + Vite
+- React Router
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
