@@ -7,7 +7,7 @@ import Dashboard from './pages/Dashboard'
 import { useAuth } from './context/AuthContext'
 
 function App() {
-  const { user, loading, signOutUser } = useAuth()
+  const { user, loading, signOutUser, signInWithDemo } = useAuth()
   
   const navItems = [
     { to: '/', label: user ? 'Dashboard' : 'Login', end: true },
@@ -74,7 +74,7 @@ function App() {
                 <button className="ghost-btn" type="button">
                   Request invite
                 </button>
-                <button className="primary-btn" type="button">
+                <button className="primary-btn" type="button" onClick={signInWithDemo}>
                   Start demo
                 </button>
               </>

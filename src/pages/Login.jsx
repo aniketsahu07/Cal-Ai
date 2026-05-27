@@ -24,7 +24,7 @@ const signals = [
 ]
 
 function Login() {
-  const { user, loading, error, signInWithGoogle, hasFirebaseConfig } = useAuth()
+  const { user, loading, error, signInWithGoogle, signInWithDemo, hasFirebaseConfig } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleGoogleLogin = async () => {
@@ -49,7 +49,7 @@ function Login() {
           Built for people who want to eat well without spending the day
           tracking.
         </p>
-        <div className="cta-row">
+        <div className="cta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
           <button
             className="primary-btn google"
             type="button"
@@ -59,6 +59,21 @@ function Login() {
             <span className="google-dot">G</span>
             {user ? 'Signed in with Google' : 'Continue with Google'}
           </button>
+          
+          <button
+            className="primary-btn demo-btn"
+            type="button"
+            onClick={signInWithDemo}
+            style={{
+              background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%)',
+              boxShadow: '0 8px 16px rgba(27, 123, 111, 0.25)',
+              border: 'none',
+              color: '#fff'
+            }}
+          >
+            ✨ Continue in Demo Mode
+          </button>
+
           <button className="ghost-btn" type="button">
             Request access
           </button>
