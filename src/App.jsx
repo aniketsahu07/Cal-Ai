@@ -3,14 +3,26 @@ import './App.css'
 import Analysis from './pages/Analysis'
 import Interactive from './pages/Interactive'
 import Login from './pages/Login'
-
-const navItems = [
-  { to: '/', label: 'Login', end: true },
-  { to: '/analysis', label: 'Analysis' },
-  { to: '/interactive', label: 'Interactive' },
-]
+import Dashboard from './pages/Dashboard'
+import { useAuth } from './context/AuthContext'
 
 function App() {
+  const { user, loading, signOutUser } = useAuth()
+  
+  const navItems = [
+    { to: '/', label: user ? 'Dashboard' : 'Login', end: true },
+    { to: '/analysis', label: 'Analysis' },
+    { to: '/interactive', label: 'Interactive' },
+  ]
+  const initials = user?.displayName
+    ? user.displayName
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'CA'
+
   return (
     <BrowserRouter>
       <div className="app">
@@ -34,18 +46,45 @@ function App() {
             ))}
           </nav>
           <div className="top-actions">
-            <button className="ghost-btn" type="button">
-              Request invite
-            </button>
-            <button className="primary-btn" type="button">
-              Start demo
-            </button>
+            {loading ? (
+              <span className="status-pill">Checking session...</span>
+            ) : user ? (
+              <div className="user-actions">
+                <div className="user-chip">
+                  {user.photoURL ? (
+                    <img className="avatar" src={user.photoURL} alt="" />
+                  ) : (
+                    <span className="avatar-fallback">{initials}</span>
+                  )}
+                  <div>
+                    <span className="user-name">
+                      {user.displayName || 'Signed in'}
+                    </span>
+                    <span className="user-email">
+                      {user.email || 'Google account'}
+                    </span>
+                  </div>
+                </div>
+                <button className="ghost-btn" type="button" onClick={signOutUser}>
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <>
+                <button className="ghost-btn" type="button">
+                  Request invite
+                </button>
+                <button className="primary-btn" type="button">
+                  Start demo
+                </button>
+              </>
+            )}
           </div>
         </header>
 
         <main className="page">
           <Routes>
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={user ? <Dashboard /> : <Login />} />
             <Route path="/analysis" element={<Analysis />} />
             <Route path="/interactive" element={<Interactive />} />
           </Routes>

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const features = [
   {
@@ -22,6 +24,21 @@ const signals = [
 ]
 
 function Login() {
+  const { user, loading, error, signInWithGoogle, hasFirebaseConfig } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleGoogleLogin = async () => {
+    if (isSubmitting || loading) return
+    try {
+      setIsSubmitting(true)
+      await signInWithGoogle()
+    } catch {
+      // Errors are already stored in context for display.
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <section className="page-grid">
       <div className="hero">
@@ -33,13 +50,38 @@ function Login() {
           tracking.
         </p>
         <div className="cta-row">
-          <button className="primary-btn google" type="button">
+          <button
+            className="primary-btn google"
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isSubmitting || loading}
+          >
             <span className="google-dot">G</span>
-            Continue with Google
+            {user ? 'Signed in with Google' : 'Continue with Google'}
           </button>
           <button className="ghost-btn" type="button">
             Request access
           </button>
+        </div>
+        <div className="auth-panel">
+          {user ? (
+            <div className="auth-status">
+              <strong>Welcome back, {user.displayName || 'there'}.</strong>
+              <span>Your analysis dashboard is ready.</span>
+            </div>
+          ) : (
+            <div className="auth-status">
+              <strong>Sign in to keep your meal history synced.</strong>
+              <span>Firebase handles Google sign-in securely.</span>
+            </div>
+          )}
+          {!hasFirebaseConfig && (
+            <div className="auth-note">
+              Firebase env values are missing. Add them to a local .env file and
+              restart the dev server.
+            </div>
+          )}
+          {error ? <div className="auth-error">{error}</div> : null}
         </div>
         <div className="note">No spam. Cancel anytime. Your data stays yours.</div>
         <div className="feature-list">
