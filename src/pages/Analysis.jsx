@@ -355,7 +355,8 @@ Return a valid, raw JSON object (with no markdown backticks or wrappers, just ra
     const todayStr = new Date().toDateString()
     const lastLoggedDate = localStorage.getItem(`cal-ai-streak-date_${userKey}`)
     if (lastLoggedDate !== todayStr) {
-      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || '0', 10)
+      const isCapacitor = !!window.Capacitor
+      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || (isCapacitor ? '12' : '0'), 10)
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = yesterday.toDateString()
