@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -96,7 +96,11 @@ function Dashboard() {
 
   const [streak, setStreak] = useState(() => {
     const storedStreak = localStorage.getItem(`cal-ai-streak_${userKey}`)
-    return storedStreak ? parseInt(storedStreak, 10) : 0
+    if (storedStreak) return parseInt(storedStreak, 10)
+    
+    // Web defaults to 0, Native Capacitor app defaults to 12 for premium mobile video showcase!
+    const isCapacitor = !!window.Capacitor
+    return isCapacitor ? 12 : 0
   })
 
   const dailyGoal = 1950
@@ -111,12 +115,48 @@ function Dashboard() {
   const caloriePercent = Math.min(100, Math.round((totalCalories / dailyGoal) * 100))
   const remainingCalories = Math.max(0, dailyGoal - totalCalories)
 
+  // Dynamic Weekly History Calculations
+  const weekdays = useMemo(() => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], [])
+  const today = useMemo(() => new Date(), [])
+  const todayDayStr = weekdays[today.getDay()]
+
+  const weeklyHistory = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, index) => {
+      const d = new Date()
+      d.setDate(today.getDate() - (6 - index))
+      const dayName = weekdays[d.getDay()]
+      const isToday = index === 6
+      const mockCalorieValues = [1850, 2100, 1780, 2200, 1950, 1890]
+      const calories = isToday ? totalCalories : mockCalorieValues[index % mockCalorieValues.length]
+
+      return {
+        day: dayName,
+        calories: calories,
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }
+    })
+  }, [totalCalories, today, weekdays])
+
+  const weeklyAverage = useMemo(() => {
+    return Math.round(weeklyHistory.reduce((acc, curr) => acc + curr.calories, 0) / 7)
+  }, [weeklyHistory])
+
+  const maxVal = useMemo(() => {
+    return Math.max(...weeklyHistory.map(d => d.calories), 2400)
+  }, [weeklyHistory])
+
+  const targetLineBottom = useMemo(() => {
+    return Math.round((dailyGoal / maxVal) * 100)
+  }, [maxVal, dailyGoal])
+
+
   // Dynamic streak tracker helper
   const updateStreak = () => {
     const todayStr = new Date().toDateString()
     const lastLoggedDate = localStorage.getItem(`cal-ai-streak-date_${userKey}`)
     if (lastLoggedDate !== todayStr) {
-      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || '0', 10)
+      const isCapacitor = !!window.Capacitor
+      let currentStreak = parseInt(localStorage.getItem(`cal-ai-streak_${userKey}`) || (isCapacitor ? '12' : '0'), 10)
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = yesterday.toDateString()
@@ -304,6 +344,64 @@ function Dashboard() {
               Reset History
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Weekly Calorie History Chart Card */}
+      <div className="card chart-card" style={{ marginTop: '0px' }}>
+        <div className="card-head">
+          <div>
+            <h3>Weekly Calorie History</h3>
+            <p>Consistency is key. See your past 7 days compared to your daily goal</p>
+          </div>
+          <span className="chip" style={{ color: 'var(--accent-strong)', fontWeight: '700' }}>Weekly average: {weeklyAverage} kcal</span>
+        </div>
+        
+        <div className="weekly-chart-wrapper" style={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', padding: '24px 8px 10px', marginTop: '10px' }}>
+          {/* Dotted Target Line */}
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: `${targetLineBottom}%`,
+            borderBottom: '2px dashed var(--accent)',
+            opacity: 0.6,
+            zIndex: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            pointerEvents: 'none'
+          }}>
+            <span style={{ fontSize: '10px', color: 'var(--accent-strong)', background: 'var(--surface)', padding: '0 6px', borderRadius: '4px', transform: 'translateY(-50%)', fontWeight: '700', border: '1px solid var(--stroke)' }}>Goal: 1950 kcal</span>
+          </div>
+          
+          {/* Bars */}
+          {weeklyHistory.map((day, idx) => {
+            const heightPercent = Math.round((day.calories / maxVal) * 100)
+            const isToday = day.day === todayDayStr
+            
+            return (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: '8px', zIndex: 2 }}>
+                <span style={{ fontSize: '11px', color: isToday ? 'var(--accent-strong)' : 'var(--muted)', fontWeight: '700' }}>
+                  {day.calories}
+                </span>
+                <div className="bar-vertical" style={{ width: '100%', height: '110px', background: 'var(--surface-soft)', borderRadius: '999px', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', position: 'relative', border: '1px solid var(--stroke)' }}>
+                  <div style={{
+                    height: `${heightPercent}%`,
+                    width: '100%',
+                    background: isToday 
+                      ? 'linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%)' 
+                      : 'linear-gradient(180deg, var(--muted) 0%, rgba(107, 100, 119, 0.4) 100%)',
+                    opacity: isToday ? 1 : 0.45,
+                    borderRadius: '999px',
+                    transition: 'height 0.3s ease'
+                  }}></div>
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: isToday ? 'var(--accent-strong)' : 'var(--ink)' }}>
+                  {day.day}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
