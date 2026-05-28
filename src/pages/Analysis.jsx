@@ -431,7 +431,7 @@ Return a valid, raw JSON object (with no markdown backticks or wrappers, just ra
         <div className="card-head">
           <div>
             <h3>Analyze a meal photo</h3>
-            <p>Real-time food recognition with free APIs.</p>
+            <p>Real-time food recognition powered by Google Gemini AI.</p>
           </div>
           <span className="chip">Live</span>
         </div>
@@ -468,7 +468,9 @@ Return a valid, raw JSON object (with no markdown backticks or wrappers, just ra
           <button className="ghost-btn" type="button" onClick={clearUpload}>
             Clear
           </button>
-          <span className="upload-hint">Clarifai + USDA keys required in .env</span>
+          <span className="upload-hint">
+            {import.meta.env.VITE_GEMINI_API_KEY ? 'Google Gemini 2.5 Flash active' : 'Google Gemini API key required in .env'}
+          </span>
         </div>
         <div className="manual-row">
           <div className="manual-field">
