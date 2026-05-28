@@ -1,6 +1,6 @@
 # Cal AI
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![React CI](https://github.com/aniketsahu07/Cal-Ai/actions/workflows/ci.yml/badge.svg)](https://github.com/aniketsahu07/Cal-Ai/actions/workflows/ci.yml)
 [![React Version](https://img.shields.io/badge/react-v19.0-61dafb?logo=react)](#)
 [![Vite Version](https://img.shields.io/badge/vite-v8.0-646cff?logo=vite)](#)
 [![Capacitor Version](https://img.shields.io/badge/capacitor-v8.3-blue?logo=capacitor)](#)
